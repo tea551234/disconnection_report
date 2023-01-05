@@ -20,8 +20,8 @@ for line in $(cat $file)
         getSnmac=$( echo "moxa" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}')  # get SN/MAC 
         getIp=$( $sshPass ip a | awk '/inet [0-9]{3}\.[0-9]{2,3}\.[0-9]{2,3}\.[0-9]{2,3}/ {gsub("/[0-9]+$", "", $2); print $2}' )  # get SN/MAC 
         checkDate='2022-12-29'
-        getPingng="$sshPass cat /home/moxa/ka_diag.log | awk /$checkDate.*PING/ " # get SN/MAC 
-        $getPingng 
+        getPingng="$sshPass cat /home/moxa/ka_diag.log | awk '/$checkDate.*PING/ {print \$1,\$2}'"
+        $getPingng
         # echo $checkDate"," $getSnmac"," $getIp "," $getPingng >> /home/moxa/fwprintenv.log
     done
 echo "finish"
