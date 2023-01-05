@@ -4,7 +4,7 @@
 
 
 file="./iptable.csv"   #需定義iptable / pwd,ip,id
-useKACMQTT="1"    #使用kill mqtt 使用:1 關閉:0
+useKACMQTT="1"    #kill mqtt 使用:1 關閉:0
 
 for line in $(cat $file)
     do
@@ -25,18 +25,17 @@ for line in $(cat $file)
       c_mqtt=$($sshPass ps -eo cmd,pid,%mem | grep ACMqtt | grep i | sed 's/\s+/ /g' )
       mqttPid=$( echo $c_mqtt | awk '{print $4}' ) #PID
       mqttMEM=$( echo $c_mqtt | awk '{print $5}' | awk -F"." '{print $1}') #mem使用量
-      # mqttMEM="6" #mem使用量
+      # mqttMEM="6" #mem使用量 測試用
       while true; do
         if [ $mqttMEM -lt 5 ] || [ $useKACMQTT == "0" ];then
-          echo "小於 5% "
+          mqttSatus="$mqttMEM 小於 5% "
           break  # 跳出當前回圈
         else
-          echo "大於 5%"
+          mqttSatus="$mqttMEM 大於 5% "
+          echo "$pwd" | $sshPass sudo -S kill -9 $mqttPid
           break   # 跳出整個迴圈
         fi
       done
-
-
       # echo $mqttPid
       # echo $mqttMEM
 
@@ -51,7 +50,7 @@ for line in $(cat $file)
         # $getPingng
           echo $($getPingng) , $getSnmac $ip,"PING NG"  >> /home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
        else
-          echo $checkDate "," $ip "," "SF"  >> /home/moxa/"$(date +%Y%m).csv" # 無斷線
+          echo $checkDate "," $ip "," "SF" "," $mqttSatus  >> /home/moxa/"$(date +%Y%m).csv" # 無斷線
         fi
       else
           echo $checkDate","$ip",-1" >> ./"$(date +%Y%m).csv"
