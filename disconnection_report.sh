@@ -12,17 +12,23 @@ file="./iptable.csv"
 for line in $(cat $file)
     do
         pwd=$(echo $line | cut -d"," -f 1)
-		ip=$(echo $line | cut -d"," -f 2)
-		id=$(echo $line | cut -d"," -f 3)
+	    	ip=$(echo $line | cut -d"," -f 2)
+	    	id=$(echo $line | cut -d"," -f 3)
         # checkDate=$(echo $(date -d "yesterday" '+%F'))
         sshPass="sshpass -p "$pwd" ssh -o PasswordAuthentication=yes moxa@"$ip" " #ssh連線 
-        mdtime= echo $(stat ka_diag.log | awk '/Modify/ {print $2}')
+        mdtime=$(stat ka_diag.log | awk '/Modify/ {print $2}') 
+       checkDate=$(date -d "yesterday" '+%F') 
+       # checkDate='2022-12-30'
+        if [   $mdtime == $checkDate  ];then
         getSnmac=$( echo "moxa" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}')  # get SN/MAC 
         getIp=$( $sshPass ip a | awk '/inet [0-9]{3}\.[0-9]{2,3}\.[0-9]{2,3}\.[0-9]{2,3}/ {gsub("/[0-9]+$", "", $2); print $2}' )  # get SN/MAC 
-        checkDate='2022-12-29'
         getPingng="$sshPass cat /home/moxa/ka_diag.log | awk '/$checkDate.*PING/ {print \$1,\$2}'"
-        $getPingng
-        # echo $checkDate"," $getSnmac"," $getIp "," $getPingng >> /home/moxa/fwprintenv.log
+        # $getPingng
+        echo $($getPingng) , $getSnmac $getIp,"PING NG"  >> /home/moxa/fwprintenv.csv #NGTIME/SN,MAC/IP
+        else
+        echo $checkDate "," $ip "," "SF"  >> /home/moxa/fwprintenv.csv # 無斷線
+        fi
+   
     done
 echo "finish"
 
@@ -40,16 +46,10 @@ echo "finish"
         #  fi   
 
 # mdTime="2023-01-03"
-# checkDate=$(date -d "yesterday" '+%F')
 # echo $checkDate
 
 
 
-# if [ $mdtime == $checkDate ];then
-#     # echo "相同"
-# else
-#     echo "不相同"
-# fi
 
 
 
