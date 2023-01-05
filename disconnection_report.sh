@@ -3,7 +3,7 @@
 #2023_01_04 coding by teaya
 
 file="/home/moxa/iptable.csv" #需定義iptable / pwd,ip,id
-useKACMQTT="1"       #kill mqtt 使用:1 關閉:0
+useKACMQTT="1"                #kill mqtt 使用:1 關閉:0
 
 for line in $(cat $file); do
   nowDate=$(date "+%F %T")
@@ -15,8 +15,10 @@ for line in $(cat $file); do
   # checkDate=$(echo $(date -d "yesterday" '+%F'))
   count=$(ping -c 2 $ip | grep from* | wc -l)
   checkDate=$(date -d "yesterday" '+%F')
-
+  # checkDatetoday=$(date '+%F')
   # checkDate='2022-12-30' #測試用日期
+  checkDatetoday='2022-12-29' #測試用日期
+
 
   if [ $count -gt 0 ]; then
     ##確認mqtt
@@ -37,18 +39,18 @@ for line in $(cat $file); do
     done
 
     ## 確認PINGNG
-    if [ $mdtime = $checkDate ]; then
+    if [ $mdtime = $checkDate ] || [ $mdtime = $checkDatetoday ] ; then
       getSnmac=$(echo "$pwd" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}') # get SN/MAC
-      getPingng="$sshPass cat /home/moxa/ka_diag.log | awk '/$checkDate.*PING/ {print \$1,\$2}'"
+      getPingng="$sshPass cat /home/moxa/ka_diag.log | awk '/($checkDate|$checkDatetoday).*PING/ {print \$1,\$2}'"
       # $getPingng
       echo $($getPingng) , $getSnmac $ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
     else
-      echo $checkDate "," $ip "," "SF" "," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
+      echo $checkDatetoday "," $ip "," "SF" "," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
     fi
 
     ##確認時間
-    # echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
-    # echo "$pwd" | $sshPass sudo -S hwclock -w
+    echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
+    echo "$pwd" | $sshPass sudo -S hwclock -w
   else
     echo $checkDate","$ip",-1" >>./"$(date +%Y%m).csv"
   fi
