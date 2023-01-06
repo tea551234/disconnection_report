@@ -11,20 +11,19 @@ for line in $(cat $file); do
   ip=$(echo $line | cut -d"," -f 2)
   id=$(echo $line | cut -d"," -f 3)
   sshPass="sshpass -p "$pwd" ssh -o PasswordAuthentication=yes moxa@"$ip" " #ssh連線
-  log_file="/home/moxa/killmqtt.log"
   # checkDate=$(echo $(date -d "yesterday" '+%F'))
   count=$(ping -c 2 $ip | grep from* | wc -l)
   checkDate=$(date -d "yesterday" '+%F')
-  # checkDatetoday=$(date '+%F')
-  # checkDate='2022-12-30' #測試用日期
-  checkDatetoday='2022-12-29' #測試用日期
-
+  checkDatetoday=$(date '+%F')
+  # checkDate='2023-01-05' #測試用日期
+  # checkDatetoday='2023-01-06' #測試用日期
 
   if [ $count -gt 0 ]; then
     ##確認mqtt
-    mdtime=$($sshPass stat /home/moxa/ka_diag.log | awk '/Modify/ {print $2}')
+    mdtime=$($sshPass stat /var/log/5g/ka_diag.log | awk '/Modify/ {print $2}')
     c_mqtt=$($sshPass ps -eo cmd,pid,%mem | grep ACMqtt | grep i | sed 's/\s+/ /g')
-    mqttPid=$(echo $c_mqtt | awk '{print $4}')                          #PID
+    mqttPid=$(echo $c_mqtt | awk '{print $4}')
+    #PID
     mqttMEM=$(echo $c_mqtt | awk '{print $5}' | awk -F"." '{print $1}') #mem使用量
     # mqttMEM="6" #mem使用量 測試用
     while true; do
@@ -39,21 +38,21 @@ for line in $(cat $file); do
     done
 
     ## 確認PINGNG
-    if [ $mdtime = $checkDate ] || [ $mdtime = $checkDatetoday ] ; then
+    if [ $mdtime = $checkDate ] || [ $mdtime = $checkDatetoday ]; then
       getSnmac=$(echo "$pwd" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}') # get SN/MAC
-      getPingng="$sshPass cat /home/moxa/ka_diag.log | awk '/($checkDate|$checkDatetoday).*PING/ {print \$1,\$2}'"
-      # $getPingng
-      echo $($getPingng) , $getSnmac $ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
+      # getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/($checkDate|$checkDatetoday).*PING/ {print $1,$2}')
+      getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/('$checkDate'|'$checkDatetoday').*PING/ {print $1,$2}')
+      echo $getPingng,$getSnmac$ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
     else
       echo $checkDatetoday "," $ip "," "SF" "," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
     fi
 
     ##確認時間
-    echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
-    echo "$pwd" | $sshPass sudo -S hwclock -w
+    # echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
+    # echo "$pwd" | $sshPass sudo -S hwclock -w
   else
-    echo $checkDate","$ip",-1" >>./"$(date +%Y%m).csv"
+    echo $checkDate","$ip",-1" >>/home/moxa/"$(date +%Y%m).csv"
   fi
 
 done
-echo "finish"
+# echo "finish"
