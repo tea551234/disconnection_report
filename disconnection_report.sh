@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 #2022_11_27 coding by willis
 #2023_01_04 coding by teaya
 
@@ -11,12 +11,9 @@ for line in $(cat $file); do
   ip=$(echo $line | cut -d"," -f 2)
   id=$(echo $line | cut -d"," -f 3)
   sshPass="sshpass -p "$pwd" ssh -o PasswordAuthentication=yes moxa@"$ip" " #ssh連線
-  # checkDate=$(echo $(date -d "yesterday" '+%F'))
   count=$(ping -c 2 $ip | grep from* | wc -l)
   checkDate=$(date -d "yesterday" '+%F')
   checkDatetoday=$(date '+%F')
-  # checkDate='2023-01-05' #測試用日期
-  # checkDatetoday='2023-01-06' #測試用日期
 
   if [ $count -gt 0 ]; then
     ##確認mqtt
@@ -37,22 +34,28 @@ for line in $(cat $file); do
       fi
     done
 
-    ## 確認PINGNG
+    ## check PINGNG
     if [ $mdtime = $checkDate ] || [ $mdtime = $checkDatetoday ]; then
       getSnmac=$(echo "$pwd" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}') # get SN/MAC
       # getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/($checkDate|$checkDatetoday).*PING/ {print $1,$2}')
-      getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/('$checkDate'|'$checkDatetoday').*PING/ {print $1,$2}')
-      echo $getPingng,$getSnmac$ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
+      getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/('$checkDate'|'$checkDatetoday').*PING/ {print $1,",",$2,",","'$getSnmac''$ip'"}')
+      # echo $getPingng,$getSnmac$ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
+      resultsGetPingng=()
+      for var in "$getPingng"; do
+        resultsGetPingng+=("$var")
+      done
+      for result in "${resultsGetPingng[@]}"; do
+        echo "$result" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
+      done
     else
       echo $checkDatetoday "," $ip "," "SF" "," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
     fi
-
-    ##確認時間
+    ##set time
     # echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
     # echo "$pwd" | $sshPass sudo -S hwclock -w
   else
     echo $checkDate","$ip",-1" >>/home/moxa/"$(date +%Y%m).csv"
   fi
-
 done
+
 # echo "finish"
