@@ -56,6 +56,9 @@ for line in $(cat $file); do
   else
     echo $checkDate","$ip",-1" >>/home/moxa/"$(date +%Y%m).csv"
   fi
+
+
+  
 done
 
 # echo "finish"
