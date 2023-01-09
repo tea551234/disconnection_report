@@ -14,7 +14,6 @@ for line in $(cat $file); do
   count=$(ping -c 2 $ip | grep from* | wc -l)
   checkDate=$(date -d "yesterday" '+%F')
   checkDatetoday=$(date '+%F')
-
   if [ $count -gt 0 ]; then
     ##確認mqtt
     mdtime=$($sshPass stat /var/log/5g/ka_diag.log | awk '/Modify/ {print $2}')
@@ -25,10 +24,10 @@ for line in $(cat $file); do
     # mqttMEM="6" #mem使用量 測試用
     while true; do
       if [ $mqttMEM -lt 5 ] || [ $useKACMQTT = "0" ]; then
-        mqttSatus="$mqttMEM 小於 5% or 功能未開啟"
+        mqttSatus="ACMqttMEM:$mqttMEM% LESS than 5%"
         break
       else
-        mqttSatus="$mqttMEM 大於 5% "
+        mqttSatus="ACMqttMEM:$mqttMEM MORE than 5% Kill ACMqtt"
         # echo "$pwd" | $sshPass sudo -S kill -9 $mqttPid
         break
       fi
@@ -38,7 +37,7 @@ for line in $(cat $file); do
     if [ $mdtime = $checkDate ] || [ $mdtime = $checkDatetoday ]; then
       getSnmac=$(echo "$pwd" | $sshPass sudo -S fw_printenv 2>&1 | awk -F'=' '/(serialnumber|ethaddr)/ {printf "%s,", $2}') # get SN/MAC
       # getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/($checkDate|$checkDatetoday).*PING/ {print $1,$2}')
-      getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/('$checkDate'|'$checkDatetoday').*PING/ {print $1,",",$2,",","'$getSnmac''$ip'"}')
+      getPingng=$(echo "$pwd" | $sshPass sudo -S cat /var/log/5g/ka_diag.log | awk '/('$checkDate'|'$checkDatetoday').*PING/ {print $1,",",$2,",5G DIFFERENT,","'$ip','$getSnmac''"$mqttSatus"'"}')
       # echo $getPingng,$getSnmac$ip,"PING NG" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
       resultsGetPingng=()
       for var in "$getPingng"; do
@@ -48,17 +47,15 @@ for line in $(cat $file); do
         echo "$result" >>/home/moxa/"$(date +%Y%m).csv" #NGTIME/SN,MAC/IP
       done
     else
-      echo $checkDatetoday "," $ip "," "SF" "," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
+      echo $(date +"%Y-%m-%d,%H:%M:%S") "," "NOT DIFFERENT" "," $ip ","",""," $mqttSatus >>/home/moxa/"$(date +%Y%m).csv" # 無斷線
     fi
     ##set time
     # echo "$pwd" | $sshPass sudo -S date -s \"$nowDate\"
     # echo "$pwd" | $sshPass sudo -S hwclock -w
   else
-    echo $checkDate","$ip",-1" >>/home/moxa/"$(date +%Y%m).csv"
+    echo $(date +"%Y-%m-%d,%H:%M:%S") ","$ip",-1" >>/home/moxa/"$(date +%Y%m).csv"
   fi
 
-
-  
 done
 
 # echo "finish"
